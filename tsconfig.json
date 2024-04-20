@@ -26,10 +26,12 @@
 
     "experimentalDecorators": true,
     "emitDecoratorMetadata": true,
+    "strictPropertyInitialization": false,
 
     "baseUrl": ".",
     "paths": {
-      "@services": ["src/services/index.ts"]
+      "@services": ["src/services/index.ts"],
+      "@lib/*": ["src/lib/*"]
     }
   }
 }

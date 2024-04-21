@@ -18,7 +18,8 @@ model Guild {
 }
 
 model User {
-  id String @id
+  id              String   @id
+  lastInteraction DateTime @default(now())
 }
 
 model Channels {

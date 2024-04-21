@@ -44,10 +44,16 @@ export class ConfigServerCommand {
         },
         channels: (channels: Channels) => {
             const display = this.selectMenuData.map(
-                ({ label, value }) =>
-                    `- ${label} ${
+                ({ label, value, emoji }) =>
+                    `- ${emoji} ${label} ${
                         channels[value] !== null
-                            ? channelMention(channels[value] as string)
+                            ? value === 'voice'
+                                ? channels.voice.length < 1
+                                    ? bold('Não definido')
+                                    : channels.voice
+                                          .map((id) => channelMention(id))
+                                          .join(' ')
+                                : channelMention(channels[value] as string)
                             : bold('Não definido')
                     }`
             )
@@ -63,13 +69,15 @@ export class ConfigServerCommand {
 
             return { embeds: [embed], components: [selectRow, buttonsRow] }
         },
-        configChannel: (channel: TChannelType) => {
+        configChannel: (channel: TChannelType, channels?: Channels) => {
             const embed = new EmbedBuilder({
                 title: `Configurar canal`,
                 description: brBuilder(
                     `Categoria: ${bold(channel.toUpperCase())}`,
                     '',
-                    'Selecione um canal para definir'
+                    `Selecione ${
+                        channel === 'voice' ? 'canais' : 'um canal'
+                    } para definir`
                 ),
                 color: Colors.Purple,
             })
@@ -79,7 +87,16 @@ export class ConfigServerCommand {
                 this.buttons.back('channels')
             )
 
-            const selectRow = createRow(this.SelectMenus.channels.setChannel)
+            if (channel === 'voice')
+                buttonsRow.addComponents(this.buttons.clearVoiceChannels)
+
+            const selectRow = createRow(
+                channel === 'voice'
+                    ? this.SelectMenus.channels.setVoiceChannels.setDefaultChannels(
+                          channels?.voice!
+                      )
+                    : this.SelectMenus.channels.setChannel
+            )
 
             return { embeds: [embed], components: [selectRow, buttonsRow] }
         },
@@ -94,13 +111,17 @@ export class ConfigServerCommand {
 
         channels: new ButtonBuilder()
             .setCustomId('config/button/channels')
-            .setStyle(ButtonStyle.Secondary)
+            .setStyle(ButtonStyle.Primary)
             .setLabel('CANAIS'),
+        clearVoiceChannels: new ButtonBuilder()
+            .setCustomId('config/button/channels/clearVoice')
+            .setStyle(ButtonStyle.Danger)
+            .setLabel('Limpar'),
 
         back: (menu: string) =>
             new ButtonBuilder()
                 .setCustomId(`config/button/${menu}`)
-                .setStyle(ButtonStyle.Danger)
+                .setStyle(ButtonStyle.Secondary)
                 .setLabel('VOLTAR'),
     }
 
@@ -129,6 +150,12 @@ export class ConfigServerCommand {
             description: 'Informa a saída de membros',
             emoji: '🍃',
         },
+        {
+            label: 'Voice',
+            value: 'voice',
+            description: 'Canais de voz automáticos',
+            emoji: '🔉',
+        },
     ] as const
 
     private SelectMenus = {
@@ -142,6 +169,16 @@ export class ConfigServerCommand {
                 customId: 'config/select/setChannel',
                 placeholder: 'Selecione um canal',
                 channelTypes: [ChannelType.GuildText],
+            }),
+
+            setVoiceChannels: new ChannelSelectMenuBuilder({
+                customId: 'config/select/setVoiceChannels',
+                channelTypes: [
+                    ChannelType.GuildVoice,
+                    ChannelType.GuildStageVoice,
+                ],
+                placeholder: 'Selecione os canais',
+                maxValues: 10,
             }),
         },
     }
@@ -174,6 +211,18 @@ export class ConfigServerCommand {
         await interaction.editReply(this.menus.channels(channels!))
     }
 
+    @ButtonComponent({ id: 'config/button/channels/clearVoice' })
+    async clearVoiceChannelsButton(interaction: ButtonInteraction<'cached'>) {
+        await interaction.deferUpdate()
+
+        const channels = await this.database.channels.update({
+            where: { guildId: interaction.guild.id },
+            data: { voice: [] },
+        })
+
+        await interaction.editReply(this.menus.channels(channels!))
+    }
+
     // Menus de Seleção
     @SelectMenuComponent({ id: 'config/select/channelCategory' })
     async selectChannelCategory(
@@ -182,14 +231,19 @@ export class ConfigServerCommand {
         const category = interaction.values[0] as TChannelType
         this.selectedCategory = category
 
-        interaction.update(this.menus.configChannel(category))
+        const channels = await this.database.channels.findUnique({
+            where: { guildId: interaction.guildId },
+        })
+
+        interaction.update(this.menus.configChannel(category, channels!))
     }
 
     @SelectMenuComponent({ id: 'config/select/setChannel' })
+    @SelectMenuComponent({ id: 'config/select/setVoiceChannels' })
     async selectSetChannel(
         interaction: ChannelSelectMenuInteraction<'cached'>
     ) {
-        const channel = interaction.values[0]
+        const channel = interaction.values
 
         await interaction.deferUpdate()
 
@@ -200,7 +254,7 @@ export class ConfigServerCommand {
                 channels = await this.database.channels.update({
                     where: { guildId: interaction.guild.id },
                     data: {
-                        logs: channel,
+                        logs: channel[0],
                     },
                 })
                 break
@@ -208,7 +262,7 @@ export class ConfigServerCommand {
                 channels = await this.database.channels.update({
                     where: { guildId: interaction.guild.id },
                     data: {
-                        leave: channel,
+                        leave: channel[0],
                     },
                 })
                 break
@@ -216,13 +270,19 @@ export class ConfigServerCommand {
                 channels = await this.database.channels.update({
                     where: { guildId: interaction.guild.id },
                     data: {
-                        welcome: channel,
+                        welcome: channel[0],
+                    },
+                })
+                break
+            case 'voice':
+                channels = await this.database.channels.update({
+                    where: { guildId: interaction.guildId },
+                    data: {
+                        voice: [...channel],
                     },
                 })
                 break
         }
-
-        console.log(channel)
 
         interaction.editReply(this.menus.channels(channels))
     }

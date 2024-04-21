@@ -1,15 +1,28 @@
-# ralph
+# Ralph
 
-To install dependencies:
+Um bot simples para uso em uma comunidade de programadores.
 
-```bash
-bun install
-```
+## Inicio
 
-To run:
+-   Esse bot usa [Bun](https://bun.sh/) como seu runtime padrão, por isso recomendo usa-lo.
 
-```bash
-bun run index.ts
-```
-
-This project was created using `bun init` in bun v1.1.3. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+> ### Começando a brincadeira
+>
+> 1. Clone o repositório
+>
+> ```bash
+> git clone https://github.com/Felix01SA/ralph.git
+> ```
+>
+> 2. Instale as dependências
+>
+> ```bash
+> bun install
+> ```
+>
+> 3. Renomeie o arquivo .env.exemple e adicione as variáveis necessárias
+> 4. Inicie o bot e seja feliz
+>
+> ```bash
+> bun start
+> ```

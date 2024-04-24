@@ -1,4 +1,3 @@
-import ora from 'ora';
 import signale from 'signale';
 import { singleton } from 'tsyringe';
 
@@ -14,17 +13,5 @@ export class Logger extends signale.Signale {
       },
       scope: 'BOT',
     });
-  }
-
-  private spinner = ora();
-
-  public startSpinner(text: string) {
-    this.spinner.start(text);
-  }
-
-  public stopSpinner(text?: string, error?: boolean) {
-    if (error) {
-      this.spinner.stop();
-    } else this.spinner.stop().succeed(text);
   }
 }
